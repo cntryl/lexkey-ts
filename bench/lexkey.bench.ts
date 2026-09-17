@@ -1,5 +1,5 @@
 import { bench, describe } from "vite-plus/test";
-import { LexKey } from "../src/index.ts";
+import { Encoder, LexKey } from "../src/index.ts";
 
 describe("scalar encoders", () => {
   bench("encodeString", () => {
@@ -19,15 +19,26 @@ describe("scalar encoders", () => {
   });
 });
 
-describe("composite keys", () => {
-  const parts = [
-    LexKey.encodeString("tenant").asBytes(),
-    LexKey.encodeUint64(42n).asBytes(),
-    LexKey.encodeBool(true).asBytes(),
-  ];
+describe("composite keys (build 3 parts from scratch, each iteration)", () => {
+  // Both benches pay for encoding every part fresh each run, so this is an
+  // apples-to-apples comparison of "build a 3-part composite key" — not
+  // encodeComposite's join cost alone against Encoder's full build cost.
+  bench("encodeComposite (allocate a LexKey per part, then join)", () => {
+    LexKey.encodeComposite([
+      LexKey.encodeString("tenant").asBytes(),
+      LexKey.encodeUint64(42n).asBytes(),
+      LexKey.encodeBool(true).asBytes(),
+    ]);
+  });
 
-  bench("encodeComposite (3 parts)", () => {
-    LexKey.encodeComposite(parts);
+  bench("Encoder (write parts directly into one buffer)", () => {
+    new Encoder()
+      .writeString("tenant")
+      .writeSeparator()
+      .writeUint64(42n)
+      .writeSeparator()
+      .writeBool(true)
+      .freeze();
   });
 });
 

@@ -1,1 +1,1 @@
-export { LexKey } from "./lexkey.js";
+export { Encoder, LexKey } from "./lexkey.js";

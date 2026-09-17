@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { LexKey } from "../src/index.ts";
+import { Encoder, LexKey } from "../src/index.ts";
 
 describe("scalar encodings (spec test vectors)", () => {
   it("encodes strings as raw UTF-8 bytes", () => {
@@ -193,5 +193,81 @@ describe("basics", () => {
   it("compares equal keys as equal", () => {
     expect(LexKey.encodeString("a").equals(LexKey.encodeString("a"))).toBe(true);
     expect(LexKey.encodeString("a").equals(LexKey.encodeString("b"))).toBe(false);
+  });
+});
+
+describe("Encoder", () => {
+  it("matches encodeComposite for the same parts", () => {
+    const key = new Encoder()
+      .writeString("foo")
+      .writeSeparator()
+      .writeInt64(42n)
+      .writeSeparator()
+      .writeBool(true)
+      .freeze();
+    expect(key.toHexString()).toBe("666f6f00800000000000002a0001");
+  });
+
+  it("supports every scalar writer, matching each LexKey.encode* counterpart", () => {
+    const key = new Encoder()
+      .writeUint8(255)
+      .writeUint16(255)
+      .writeUint32(255)
+      .writeUint64(255n)
+      .writeInt8(-123)
+      .writeInt16(-123)
+      .writeInt32(-123)
+      .writeInt64(-123n)
+      .writeFloat32(3.14)
+      .writeFloat64(3.14)
+      .writeUuid("550e8400-e29b-41d4-a716-446655440000")
+      .writeBytes(Uint8Array.of(0xaa, 0xbb))
+      .freeze();
+
+    expect(key.toHexString()).toBe(
+      "ff" +
+        "00ff" +
+        "000000ff" +
+        "00000000000000ff" +
+        "05" +
+        "7f85" +
+        "7fffff85" +
+        "7fffffffffffff85" +
+        "c048f5c3" +
+        "c0091eb851eb851f" +
+        "550e8400e29b41d4a716446655440000" +
+        "aabb",
+    );
+  });
+
+  it("grows its buffer past the initial capacity hint", () => {
+    const enc = new Encoder(1);
+    for (let i = 0; i < 100; i++) enc.writeByte(i);
+    const key = enc.freeze();
+    expect(key.length).toBe(100);
+    for (let i = 0; i < 100; i++) expect(key.asBytes()[i]).toBe(i);
+  });
+
+  it("detaches its buffer on freeze so later writes cannot mutate a frozen key", () => {
+    const enc = new Encoder();
+    enc.writeString("first");
+    const first = enc.freeze();
+    enc.writeString("second");
+    expect(first.toHexString()).toBe(LexKey.encodeString("first").toHexString());
+  });
+
+  it("clear() resets length but keeps writing usable", () => {
+    const enc = new Encoder();
+    enc.writeString("discarded").clear().writeString("kept");
+    expect(enc.freeze().toHexString()).toBe(LexKey.encodeString("kept").toHexString());
+  });
+
+  it("rejects a UUID of the wrong byte length", () => {
+    expect(() => new Encoder().writeUuid(Uint8Array.of(1, 2, 3))).toThrow(RangeError);
+  });
+
+  it("rejects malformed UUID strings", () => {
+    expect(() => LexKey.encodeUuid("not-a-uuid")).toThrow(RangeError);
+    expect(() => LexKey.encodeUuid("550e8400-e29b-41d4-a716-44665544000g")).toThrow(RangeError);
   });
 });
