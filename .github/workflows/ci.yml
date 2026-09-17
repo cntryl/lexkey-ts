@@ -9,11 +9,22 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
         with:
-          node-version: 22
-      - run: npm ci
-      - run: npx vp check
-      - run: npx vp test
-      - run: npx vp pack
+          node-version: lts/*
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check formatting, lint, and types
+        run: npx vp check
+
+      - name: Run tests
+        run: npx vp test
+
+      - name: Build package
+        run: npx vp pack
