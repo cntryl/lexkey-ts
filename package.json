@@ -34,10 +34,10 @@
     "@types/node": "^26.1.1",
     "bumpp": "^11.1.0",
     "typescript": "^7.0.2",
-    "vite-plus": "^0.3.2"
+    "vite-plus": "^1.4.0"
   },
   "overrides": {
-    "vite": "npm:@voidzero-dev/vite-plus-core@0.3.2"
+    "vite": "npm:@voidzero-dev/vite-plus-core@1.4.0"
   },
   "devEngines": {
     "packageManager": {
