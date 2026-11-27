@@ -1,16 +1,21 @@
 name: Publish
 
 on:
-  release:
-    types: [published]
+  workflow_dispatch:
 
 jobs:
   publish:
     runs-on: ubuntu-latest
+    environment: github-packages
     permissions:
       contents: read
       packages: write
     steps:
+      - name: Require main
+        env:
+          REF: ${{ github.ref }}
+        run: test "$REF" = refs/heads/main
+
       - name: Checkout
         uses: actions/checkout@v7
 
